@@ -1,21 +1,21 @@
 # DB Subnet Group
-resource "aws_db_subnet_group" "dev_db_subnet_groups" {
-  name       = "dev-db-subnet-groups"
+resource "aws_db_subnet_group" "dev_db_subnet_group" {
+  name       = "dev-db-subnet-group"
   subnet_ids = [
-    "subnet-085552d5c09733e34",
-    "subnet-0c6f308d771b8c37f"
+    "subnet-00c14d9546f9115fc",
+    "subnet-066c59970d3494989"
   ]
   tags = {
-    Name = "dev-db-subnet-groups"
+    Name = "dev-db-subnet-group"
   }
 }
 
 # Security Group for RDS
-resource "aws_security_group" "dev_rds_sgroups" {
-  name   = "dev-rds-sgroups"
-  vpc_id = "vpc-0c606132518c6f618"
+resource "aws_security_group" "dev_rds_sg" {
+  name   = "dev-rds-sg"
+  vpc_id = "vpc-0499b7d0ef412f6f7"
   tags = {
-    Name = "dev-rds-sgroups"
+    Name = "dev-rds-sg"
   }
 
   # Allow MySQL traffic from application SG
@@ -33,7 +33,6 @@ resource "aws_security_group" "dev_rds_sgroups" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
-
 # RDS MySQL Instance
 resource "aws_db_instance" "dev_rds" {
   allocated_storage      = 20
@@ -42,24 +41,23 @@ resource "aws_db_instance" "dev_rds" {
   engine_version         = "8.0"
   instance_class         = "db.t3.micro"
   db_name                = "devdb"
-  identifier             = "my-db"
+  identifier             = "my-dev-db"
   username               = "admin"
   password               = "StrongPassw0rd!"
   skip_final_snapshot    = true
-  publicly_accessible    = true
-
-  db_subnet_group_name   = aws_db_subnet_groups.dev_db_subnet_groups.name
-  vpc_security_group_ids = [aws_security_groups.dev_rds_sgroups.id]
+  
+  db_subnet_group_name   = aws_db_subnet_group.dev_db_subnet_group.name
+  vpc_security_group_ids = [aws_security_group.dev_rds_sg.id]
   depends_on = [ aws_db_subnet_group.dev_db_subnet_group ]
 
-  tags = {
-    Name = "dev-rds"
-  }
 }
-# resource "aws_db_instance" "read_replica" {
-#     replicate_source_db = aws_db_instance.dev_rds.identifier
-#     instance_class = "db.t3.micro"
-#     identifier = "my-read-replica"
 
-  
-# }
+# Read Replica (will wait until primary is ready)
+resource "aws_db_instance" "read_replica" {
+  replicate_source_db    = aws_db_instance.dev_rds.identifier  
+  instance_class         = "db.t3.micro"
+  identifier             = "my-read-replica"
+
+  depends_on = [aws_db_instance.dev_rds]
+}
+
